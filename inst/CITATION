@@ -6,13 +6,13 @@ entry       = "article",
   author       = personList(person(given="Luca", family="Scrucca", email="luca@stat.unipg.it")),
   journal      = "Computational Statistics & Data Analysis",
   year         = 2011,
-  pages        = "??--??",
-  volume       = "?/?",
+  volume       = "5 (11)",
+  pages        = "3010-3026",
   # url          = "",
 
   textVersion  = 
   paste("Scrucca, L. (2011).",
         "Model-based SIR for dimension reduction",
-        "Computational Statistics & Data Analysis ?/?, ??-??.")
+        "Computational Statistics & Data Analysis, 5(11), 3010-3026.")
 )
 

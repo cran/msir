@@ -1,5 +1,6 @@
 \name{msir}
 \alias{msir}
+\alias{print.msir}
 
 \title{MSIR -- Model-based Sliced Inverse Regression}
 
@@ -7,8 +8,7 @@
 
 \usage{
 msir(x, y, nslices = msir.nslices, slice.function = msir.slices, 
-     modelNames = NULL, G = NULL, normalized = TRUE, 
-     cov = c("mle", "regularized"), noise = NULL)
+     modelNames = NULL, G = NULL, cov = c("mle", "regularized"), \dots)
 }
 
 \arguments{
@@ -18,15 +18,14 @@ msir(x, y, nslices = msir.nslices, slice.function = msir.slices,
   \item{slice.function}{the slice functions to be used, by default \code{\link{msir.slices}}, but the user can provide a different slicing function.}
   \item{modelNames}{a vector of character strings indicating the Gaussian mixture models to be fitted as described in \code{\link[mclust]{mclustModelNames}}. If a  vector of strings is given they are used for all the slices. If a list of vectors is provided then each vector refers to a single slice.}
   \item{G}{an integer vector specifying the numbers of mixture components used in fitting Gaussian mixture models. If a list of vectors is provided then each vector refers to a single slice.}
-  \item{normalized}{If \code{TRUE} (default) the basis vectors are normalized to have unit length.}
   \item{cov}{The predictors marginal covariance matrix. Possible choices are:
   \tabular{lcl}{
-  \code{"mle"} \tab = \tab maximum likelihood estimate\cr
-  \code{"regularized"} \tab = \tab regularized covariance matrix (see  \code{\link{msir.regularizedSigma}})\cr
-  matrix \tab = \tab a \eqn{(p \times p)}{(p x p)}  user defined covariance matrix
+    \code{"mle"} \tab = \tab maximum likelihood estimate\cr
+    \code{"regularized"} \tab = \tab regularized covariance matrix (see  \code{\link{msir.regularizedSigma}})\cr
+    \code{R matrix} \tab = \tab a \eqn{(p \times p)}{(p x p)} user defined covariance matrix
   }
 }
-  \item{noise}{an optional noise component for the Gaussian mixture models (see \code{\link[mclust]{mclustBIC}}).}
+  \item{\dots}{other arguments passed to \code{msir.compute}.}
 }
 
 %\details{}
@@ -44,21 +43,21 @@ Returns an object of class \code{'msir'} with attributes:
   \item{sigma}{the marginal predictors covariance matrix.}
   \item{M}{the msir kernel matrix.}
   \item{evalues}{the eigenvalues from the generalized eigen-decomposition of \code{M}.}
-  \item{evectors}{the eigenvectors from the generalized eigen-decomposition of \code{M} ordered according to the eigenvalues. If \code{normalized = TRUE} then they are normalized to have unit length.}
-  \item{std.evectors}{standardized eigenvectors obtained by multiplying each value by the standard deviation of the corresponding predictor. The resulting coefficients are scaled such that all predictors have unit standard deviation.}
+  \item{evectors}{the raw eigenvectors from the generalized eigen-decomposition of \code{M} ordered according to the eigenvalues.}
+  \item{basis}{the normalized eigenvectors from the generalized eigen-decomposition of \code{M} ordered according to the eigenvalues.}
+  \item{std.basis}{standardized basis vectors obtained by multiplying each coefficient of the eigenvectors by the standard deviation of the corresponding predictor. The resulting coefficients are scaled such that all predictors have unit standard deviation.}
   \item{numdir}{the maximal number of directions estimated.}
   \item{dir}{the estimated MSIR directions from mean-centered predictors.}
 }
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction, to appear in Computational Statistics & Data Analysis.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 % \note{}
 %% ~Make other sections like Warning with \section{Warning }{....} ~
-\seealso{\code{\link[dr]{dr}}}
+\seealso{\code{\link[msir]{summary.msir}}, \code{\link[msir]{plot.msir}}, \code{\link[dr]{dr}}}
 
 \examples{
-require(MASS)
 # 1-dimensional simple regression
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))

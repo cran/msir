@@ -5,7 +5,7 @@
 ## Written by Luca Scrucca                                                 ##
 #############################################################################
 
-msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, modelNames = NULL, G = NULL, normalized = TRUE, cov = c("mle", "regularized"), noise = NULL)
+msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, modelNames = NULL, G = NULL, cov = c("mle", "regularized"), ...)
 { 
   call <- match.call()
   if(!is.numeric(cov)) 
@@ -18,7 +18,7 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
     stop("Dimension of y and x does not match!")
   if(is.null(colnames(x))) 
      colnames(x) <- paste(xname, 1:p, sep="")
-  #
+  #-----------------------------------------------------------------  
   if(is.factor(y)) 
     { nslices <- nlevels(y) }
   else
@@ -42,9 +42,8 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
       G <- max(min((n/nslices)%/%10, 15), 3)
       G <- 1:G }
   if(is.null(modelNames))
-    modelNames <- .Mclust$emModelNames
-  mixmod <- msir.compute(x, ysl, G = G, modelNames = modelNames,
-                         noise = noise, verbose = FALSE, warn = TRUE)
+    modelNames <- mclust:::.Mclust$emModelNames
+  mixmod <- msir.fit(x, ysl, G = G, modelNames = modelNames, ...)
   # re-order wrt ysl
   tmp <- mixmod 
   for(j in 1:nslices) { tmp[j] <- mixmod[paste(j)] }
@@ -56,7 +55,7 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
   ix <- cbind(cumsum(mixcomp)-mixcomp+1, cumsum(mixcomp))
   f <- rep(0, ncomp)
   mu.k <- matrix(0, ncomp, p)
-  Sigma.k <- array(0, dim = c(p,p,ncomp))
+  # Sigma.k <- array(0, dim = c(p,p,ncomp))
   for(h in 1:nslices)
      { par <- mixmod[[h]]$parameters
        pro <- par$pro[1:mixmod[[h]]$G]
@@ -64,9 +63,6 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
        i <- seq(ix[h,1],ix[h,2])
        f[i] <- pro*tau[h]/sum(pro)
        mu.k[i,] <- t(par$mean)
-       if(p==1) { S.k <- array(par$variance$sigmasq, c(p,p,mixcomp[h])) }
-       else     { S.k <- par$variance$sigma }
-       Sigma.k[,,i] <- S.k[,,1:mixcomp[h]]
      }
   # Note that: 
   # mu = colMeans(x) = apply(mu.k, 2, function(m) sum(m*f))
@@ -93,48 +89,53 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
     }
   evalues <- (SVD$d+abs(SVD$d))/2
   numdir <- min(p, sum(evalues > sqrt(.Machine$double.eps)))
-  evalues <- evalues[1:numdir]
-  V <- SVD$v[,1:numdir,drop=FALSE]
-  if(normalized) V <- as.matrix(apply(V, 2, normalize))
-  rownames(V) <- colnames(x)
-  
-  z <- scale(x, center = mu, scale=FALSE) %*% V
+  evalues <- evalues#[1:numdir]
+  # raw basis
+  V <- SVD$v
+  # normalized basis
+  B <- as.matrix(apply(V[,seq(numdir),drop=FALSE], 2, normalize))
+  # standardized and normalized basis
+  sdx <- sqrt(diag(Sigma))
+  std.B <- as.matrix(apply(V[,1:numdir,drop=FALSE], 2, 
+                           function(x) x*sdx))
+  std.B <- as.matrix(apply(std.B, 2, normalize))  
+  # directions
+  z <- scale(x, center = mu, scale=FALSE) %*% B
   # set sign of coordinates to agree with ols
   sign <- as.vector(sign(cor(z,lm.fit(x,ysl)$fitted.values)))
   if(!any(is.na(sign)))
-    { sign <- diag(sign, ncol = ncol(V))
-      V <- V %*% sign
+    { sign <- diag(sign, ncol = numdir)
+      B <- B %*% sign
+      std.B <- std.B %*% sign
       z <- z %*% sign 
     }
-  colnames(V) <- colnames(z) <- paste("Dir", 1:ncol(V), sep="")
-  #
-  sdx <- sqrt(diag(Sigma))
-  std.V <- as.matrix(apply(V, 2, function(x) x*sdx))
-  if(normalized) std.V <- as.matrix(apply(std.V, 2, normalize))
-  # std.V <- std.V %*% sign
-  dimnames(std.V) <- dimnames(V)
+  dimnames(B) <- list(colnames(x), paste("Dir", seq(numdir), sep = ""))
+  dimnames(std.B) <- dimnames(B)
+  colnames(z) <- colnames(B)
   #
   out = list(call = call, x = x, y = y, 
              slice.info = slice.info,
              mixmod = mixmod, 
              loglik = sum(sapply(mixmod, function(mod) mod$loglik)),
              f = f, mu = mu.k, sigma = Sigma, M = M, 
-             evalues = evalues, evectors = V, 
-             # raw.evectors = as.matrix(SVD$v), 
-             std.evectors = std.V, 
+             evalues = evalues, evectors = V,
+             basis = B, std.basis = std.B, 
              numdir = numdir, dir = z)             
   class(out) <- "msir"
   return(out)
 }
 
 
-msir.compute <- function(data, labels, G = NULL, modelNames = NULL, noise = NULL, prior = NULL, control = emControl(), initialization = NULL, warn = FALSE, verbose = TRUE, ...) 
+msir.fit <- function(data, labels, G = NULL, modelNames = NULL, 
+                     control = emControl(itmax = c(.Machine$integer.max, 50)),
+                     initialization = NULL, 
+                     warn = FALSE, verbose = FALSE, ...) 
 {
   mc <- match.call(expand.dots = TRUE)
-  noise <- noise
   mc[[1]] <- as.name("mclustBIC")
   mc$labels <- mc$verbose <- mc$noise <- NULL
   mc$G <- mc$modelNames <- NULL
+  mc$control <- control
   dimData <- dim(data)
   oneD <- is.null(dimData) || length(dimData[dimData > 1]) == 1
   if(!oneD && length(dimData) != 2) 
@@ -148,22 +149,26 @@ msir.compute <- function(data, labels, G = NULL, modelNames = NULL, noise = NULL
     { data <- as.matrix(data)
       n <- nrow(data)
       p <- ncol(data) }
+  minObs <- msir.nslices(n,p)
   U <- sort(unique(labels))
   L <- length(U)
   S <- rep(0, L)
   M <- rep("XXX", L)
   #
-  if (is.null(G)) { G <- rep(list(1:5), L) }
-  else if (is.list(G)) { G <- lapply(G, sort) }
-       else            { G <- rep(list(sort(G)), L) }
-  if (any(unlist(G)) <= 0) 
+  if(is.null(G)) 
+    { G <- rep(list(1:5), L) }
+  else if(is.list(G)) 
+         { G <- lapply(G, sort) }
+       else 
+         { G <- rep(list(sort(G)), L) }
+  if (any(unlist(G) <= 0))
       stop("G must be positive")
   #
-  if (is.null(modelNames)) 
-     { modelNames <- rep(list(.Mclust$emModelNames), L) }
+  if(is.null(modelNames)) 
+    { modelNames <- rep(list(mclust:::.Mclust$emModelNames), L) }
   else
-  if (!is.list(modelNames)) 
-     { modelNames <- rep(list(modelNames), L) }
+  if(!is.list(modelNames)) 
+    { modelNames <- rep(list(modelNames), L) }
   if(oneD)
     { for(l in 1:L)
          modelNames[l] <- ifelse(any(grep("V", modelNames)), "V", "E") 
@@ -171,30 +176,42 @@ msir.compute <- function(data, labels, G = NULL, modelNames = NULL, noise = NULL
   #
   R <- rep(list(NULL), L)
   for(l in 1:L) 
+  
      { I <- (labels == U[l])
        X <- data[I,]
        mc[[2]] <- X
        mc$G <- G[[l]]
        mc$modelNames <- as.character(modelNames[[l]])
-       if(!is.null(noise))
-         mc$initialization <- list(noise = noise[I])
        BIC <- suppressWarnings(eval(mc, parent.frame()))
        if(all(is.na(BIC))) 
-         { mc$modelNames <- .Mclust$emModelNames
-           BIC <- suppressWarnings(eval(mc, parent.frame())) }
-       SUMMARY <- summary(BIC, X)
+         { m <- seq(which(mclust:::.Mclust$emModelNames == mc$modelNames))
+           mc$modelNames <- mclust:::.Mclust$emModelNames[m]
+           BIC <- suppressWarnings(eval(mc, parent.frame())) 
+         }
+       SUMMARY <- suppressWarnings(summary(BIC, X))
+       # select best model with at least 5 obs
+       i <- 1
+       while(any(table(SUMMARY$classification) < minObs) & 
+             sum(!is.na(BIC)) > i)
+            { i <- i + 1
+              mod <- strsplit(names(pickBIC(BIC, i))[i], ",")[[1]]
+              mcc <- mc
+              mcc[[1]] <- as.name("Mclust")
+              mcc$modelNames <- mod[1]
+              mcc$G <- mod[2]
+              SUMMARY <- suppressWarnings(eval(mcc, parent.frame()))
+            }
        S[l] <- SUMMARY$G
        M[l] <- SUMMARY$modelName
        R[[l]] <- c(SUMMARY, list(observations = (1:n)[I]))
      }
   names(S) <- M
-  if (verbose) 
-      print(S)
+  if(verbose) print(S)
   names(R) <- U
   R$Vinv <- NULL
-  structure(R, G = G, modelNames = modelNames, prior = prior, 
+  structure(R, G = G, modelNames = modelNames, 
             control = control, initialization = initialization, 
-            warn = warn) # class = "mclustDAtrain")
+            warn = warn)
 }
 
 
@@ -206,20 +223,14 @@ print.msir <- function(x, ...)
   cat(paste(deparse(object$call), sep="\n", collapse = "\n"), "\n", sep="")
 }
 
-summary.msir <- function(object, numdir = object$numdir, std = FALSE, digits = max(3, getOption("digits") - 3), verbose = TRUE, ...)
+summary.msir <- function(object, numdir = object$numdir, std = FALSE, ...)
 {
   if(class(object) != "msir")
     stop("object is not of class 'msir'." )
-  # if(se & std) 
-  #  stop("arguments 'se' and 'std' can't be provided simultaneously." )
-  #
-  n <- length(object$y)
-  nslices <- object$slice.info$nslices
-  #
-  cat("\nCall:\n")
-  cat(paste(deparse(object$call), sep="\n", collapse = "\n"), "\n\n", sep="")
-  cat("Model-based SIR\n\n")
-  #
+
+  #n <- length(object$y)
+  #nslices <- object$slice.info$nslices
+
   tab <- rbind(sapply(object$mixmod, function(m) m$modelName),
                sapply(object$mixmod, function(m) m$G))
   sizes <- list()
@@ -228,62 +239,78 @@ summary.msir <- function(object, numdir = object$numdir, std = FALSE, digits = m
        sizes[[i]] <- as.vector(table(m$classification)) }
   tab <- rbind(tab, sapply(sizes, function(s) paste(s, collapse="|")))
   rownames(tab) <- c("Mixt.Mod.", "N.comp.", "N.obs.")
-  cat("Slices:\n")
-  print(tab, na.print="", quote=FALSE)
-  #
-  evectors <- object$evectors[,1:numdir,drop=FALSE]
-  std.evectors <- object$std.evectors[,1:numdir,drop=FALSE]
-  rownames(evectors) <- colnames(object$x)
-  evalues <- object$evalues[1:numdir]
+  
+  basis <- object$basis[,seq(numdir),drop=FALSE]
+  std.basis <- object$std.basis[,seq(numdir),drop=FALSE]
+  rownames(basis) <- colnames(object$x)
+  evalues <- object$evalues[seq(numdir)]
   evalues <- rbind("Eigenvalues" = evalues, 
                    "Cum. %" = cumsum(evalues/sum(object$evalues))*100)
-  colnames(evalues) <- colnames(evectors)
-  if(verbose)
-    { 
-      #if(se)
-      #  { se <- msir.dirse(object)
-      #    out <- matrix(NA, nrow(evectors), numdir*3)
-      #    for(j in 1:numdir)
-      #       { out[,((j-1)*3+1):((j-1)*3+3)] <- 
-      #                        cbind(evectors[,j], se[,j], evectors[,j]/se[,j])
-      #       }
-      #    rownames(out) <- rownames(evectors)
-      #    cnames <- rep(NA, numdir*3)
-      #    cnames[(0:(ncol(evectors)-1))*3+1] <- colnames(evectors)
-      #    cnames[(0:(ncol(evectors)-1))*3+2] <- "SE"
-      #    cnames[(0:(ncol(evectors)-1))*3+3] <- "Est/SE"
-      #    colnames(out) <- cnames
-      #    cat("\nEigenvectors and approximate standard errors:\n")
-      #    print(out, digits = digits)
-      #  }
-      #else
-      if(std) { cat("\nStandardized basis vectors using predictors \nscaled to have std.dev. equal to one:\n")
-                print(std.evectors, digits = digits) }
-      else    { cat("\nEstimated basis vectors:\n")
-                print(evectors, digits = digits) }
-    }
-  cat("\n")
-  print(evalues, digits = digits)
-  #
+  colnames(evalues) <- colnames(basis)
+  #  { se <- msir.dirse(object)
+  #    out <- matrix(NA, nrow(basis), numdir*3)
+  #    for(j in 1:numdir)
+  #       { out[,((j-1)*3+1):((j-1)*3+3)] <- 
+  #                        cbind(basis[,j], se[,j], basis[,j]/se[,j])
+  #       }
+  #    rownames(out) <- rownames(basis)
+  #    cnames <- rep(NA, numdir*3)
+  #    cnames[(0:(ncol(basis)-1))*3+1] <- colnames(basis)
+  #    cnames[(0:(ncol(basis)-1))*3+2] <- "SE"
+  #    cnames[(0:(ncol(basis)-1))*3+3] <- "Est/SE"
+  #    colnames(out) <- cnames
+  #    cat("\nEigenvectors and approximate standard errors:\n")
+  #    print(out, digits = digits)
+  #  }
+
   StructDimTab <- NULL
   if(!is.null(object$bic))
-    { bic <- signif(object$bic$crit, digits = digits)
+    { bic <- signif(object$bic$crit)
       bic[object$bic$d+1] <- paste(bic[object$bic$d+1], "*", sep="")
       StructDimTab <- rbind("BIC-type criterion" = bic)
+      colnames(StructDimTab) <- 0:(ncol(StructDimTab)-1)
     }
   if(!is.null(object$permtest))
-    { s <- signif(object$permtest$summary$Stat, digits = digits)
+    { s <- signif(object$permtest$summary$Stat)      
       nd <- ifelse(is.null(ncol(StructDimTab)), length(s), ncol(StructDimTab))
       StructDimTab <- rbind(StructDimTab, "Test statistic" = c(s, rep("", nd-length(s))))
-      s <- signif(object$permtest$summary$"p-value", digits = digits)
+      s <- signif(object$permtest$summary$"p-value")
       StructDimTab <- rbind(StructDimTab, "Permutation p-value" = c(s, rep("", nd-length(s))))
-    }
-  if(!is.null(StructDimTab))
-    { cat("\nStructural dimension:\n")
       colnames(StructDimTab) <- 0:(ncol(StructDimTab)-1)
-      print(StructDimTab, na.print="", quote=FALSE) }
+    }
+
+  out <- list(call = object$call, tab = tab, std = std,
+              basis = basis, std.basis = std.basis, evalues = evalues,
+              StructDimTab = StructDimTab)    
+  class(out) <- "summary.msir"
+  return(out)
+}
+
+print.summary.msir <- function(x, digits = max(5, getOption("digits") - 3), ...)
+{
+  cat("\nCall:\n")
+  cat(paste(deparse(x$call), sep="\n", collapse = "\n"), "\n\n", sep="")
+  cat("Model-based SIR\n\n")
   #
-  invisible(object)
+  cat("Slices:\n")
+  print(x$tab, na.print="", quote=FALSE)
+
+  if(x$std) 
+    { cat("\nStandardized basis vectors using predictors \nscaled to have std.dev. equal to one:\n")
+      print(x$std.basis, digits = digits) }
+  else    
+    { cat("\nEstimated basis vectors:\n")
+      print(x$basis, digits = digits) }
+  
+  cat("\n")
+  print(x$evalues, digits = digits)
+  
+  if(!is.null(x$StructDimTab))
+    { cat("\nStructural dimension:\n")
+      colnames(x$StructDimTab) <- 0:(ncol(x$StructDimTab)-1)
+      print(x$StructDimTab, na.print="", quote=FALSE) }
+
+  invisible()
 }
 
 plot.msir <- function(x, which, type = c("pairs", "2Dplot", "spinplot", "evalues", "coefficients"), span = NULL, std = TRUE, ylab, xlab, restore.par = TRUE, ...)
@@ -317,9 +344,7 @@ plot.msir <- function(x, which, type = c("pairs", "2Dplot", "spinplot", "evalues
                       colnames(data) <- c(colnames(dir)[1], "y", colnames(dir)[2])
                       if(!missing(ylab)) colnames(data)[2] <- ylab
                       if(!missing(xlab)) colnames(data)[c(1,3)] <- xlab
-                      plot3d(data[,c(1,3,2)], type = "p", ...)
-                      # spinplot(data, fit.smooth = is.numeric(span), 
-                      #         span = span, ...) 
+                      spinplot(data, fit.smooth = is.numeric(span), span = span, ...)
                     }
                 },
    "evalues" = { bic <- msir.bic(object, plot = FALSE)
@@ -355,8 +380,8 @@ plot.msir <- function(x, which, type = c("pairs", "2Dplot", "spinplot", "evalues
                  points(bic$d, 0, pch = 20)
                },
     "coefficients" = { if(missing(which)) which <- 1:object$numdir
-                       if(std) B <- object$std.evectors[,which,drop=FALSE]
-                       else    B <- object$evectors[,which,drop=FALSE]
+                       if(std) B <- object$std.basis[,which,drop=FALSE]
+                       else    B <- object$basis[,which,drop=FALSE]
                        evalues <- object$evalues[which]
       ev  <- signif(evalues, 4)
       evp <- round(evalues/sum(object$evalues[1:numdir])*100,2)
@@ -390,6 +415,10 @@ plot.msir <- function(x, which, type = c("pairs", "2Dplot", "spinplot", "evalues
   invisible()
 }
 
+# temporary patch waiting spinplot to be made available on CRAN
+spinplot <- function(data, ...) plot3d(data[,c(1,3,2)], type = "p", ...)
+
+
 msir.dir <- function(object, numdir = object$numdir)
 { 
   if(class(object) != "msir")
@@ -399,15 +428,13 @@ msir.dir <- function(object, numdir = object$numdir)
 
 ## Assessing dimension
 
-msir.permutation.test <- function(object, npermute = 99, numdir = min(object$numdir,3), verbose = TRUE)
+msir.permutation.test <- function(object, npermute = 99, numdir = object$numdir, verbose = TRUE)
 {
   test.statistic <- function(object, nd)
     { length(object$y) * rev(cumsum(rev(object$evalues)))[1:nd] }
   call <- object$call
-  call$G <- lapply(object$mixmod, function(m) m$G)
-  call$modelNames <- lapply(object$mixmod, function(m) m$modelName)
-  dir  <- object$dir
   n <- length(object$y)
+  z <- scale(object$x, center = TRUE, scale = FALSE) %*% object$evectors
   nd <- min(numdir,length(which(abs(object$evalues)>1.e-8))-1)
   nt   <- nd + 1
   obstest <- test.statistic(object, nt)
@@ -416,15 +443,19 @@ msir.permutation.test <- function(object, npermute = 99, numdir = min(object$num
   nslices <- object$slice.info$nslices
   G <- lapply(object$mixmod, function(m) m$G)
   modelNames <- lapply(object$mixmod, function(m) m$modelName)
+  call$G <- G
+  call$modelNames <- modelNames
+  #
   if(verbose)
     { cat("Calculating, please be patient...\n")
       flush.console()
       pbar <- txtProgressBar(min = 0, max = npermute, style = 3) }
+  #
   for(j in 1:npermute) 
-     { perm <- sample(1:n)
+     { perm <- sample.int(n)
        for(col in 0:nd)
-          { xx <- if(col == 0) dir[perm,] 
-                  else         cbind(dir[,(1:col)], dir[perm,-(1:col)])
+          { xx <- if(col == 0) 
+                    z[perm,] else cbind(z[,(1:col)], z[perm,-(1:col)])
             pmod <- msir(xx, ysl, nslices = nslices, 
                          G = G, modelNames = modelNames)
             val[col + 1] <- test.statistic(pmod, col + 1)[col + 1]
@@ -581,36 +612,38 @@ eigen.decomp <- function(X1, X2, inv = FALSE, tol = sqrt(.Machine$double.eps))
   return(list(d = evalues, v = evectors))
 }
 
-
-msir.regularizedSigma <- function(x, inv = FALSE, model = c("EII", "EEI", "EEE"))
+# 
+msir.regularizedSigma <- function(x, inv = FALSE, model = c("XII", "XXI", "XXX"))
 {
   x <- as.matrix(x)
   n <- nrow(x)
   p <- ncol(x)
-  mod.EII <- if(any(model == "EII")) meEII(x, rep(1,n)) # spherical
-             else                    list(loglik = NA)
-  mod.EEI <- if(any(model == "EEI")) meEEI(x, rep(1,n)) # diagonal
-             else                    list(loglik = NA)
-  mod.EEE <- if((n > p) & any(model == "EEE"))  meEEE(x, rep(1,n)) # full covariance
-             else                    list(loglik = NA)
-  bic <- c(2 * mod.EII$loglik - (p+1) * log(n),
-           2 * mod.EEI$loglik - (2*p) * log(n),
-           2 * mod.EEE$loglik - (p+p*(p-1)/2) * log(n))
-  meEst <- switch(which.max(bic),
-                  "1" = mod.EII,
-                  "2" = mod.EEI,
-                        mod.EEE)
-  par <- meEst$parameters
+  bic <- vector("double", length(model))
+  mod <- vector("list", length(model))
+  names(bic) <- names(mod) <- model
+  for(i in seq(model))
+     { switch(model[i],
+              "XII" = { mod[[i]] <- mvnXII(x) },
+              "XXI" = { mod[[i]] <- mvnXXI(x) },
+              "XXX" = { mod[[i]] <- mvnXXX(x) },
+                      stop("model not available"))
+       bic[i] <- do.call("bic", mod[[i]])
+       # XII = 2*loglik - (p+1) * log(n)  
+       # XXI = 2*loglik - (2*p) * log(n),
+       # XXX = 2*loglik - (p+p*(p+1)/2) * log(n))
+     }
+  bestMod <- which.max(bic)
+  par <- mod[[bestMod]]$parameters
   # mu <- par$mean
   Sigma <- par$variance$Sigma
-  attr(Sigma, "model") <- meEst$modelName
+  attr(Sigma, "model") <- mod[[bestMod]]$modelName
   #
   if(inv) 
     { out <- list(Sigma = Sigma, SigmaInv = NULL)
-      switch(meEst$modelName,
-             "EII" = { out$SigmaInv <- diag(1/diag(par$variance$Sigma)) },
-             "EEI" = { out$SigmaInv <- diag(1/diag(par$variance$Sigma)) },
-             "EEE" = { out$SigmaInv <- solve(par$variance$Sigma) } )
+      switch(model[bestMod],
+              "XII" = { out$SigmaInv <- diag(1/diag(par$variance$Sigma)) },
+              "XXI" = { out$SigmaInv <- diag(1/diag(par$variance$Sigma)) },
+              "XXX" = { out$SigmaInv <- solve(par$variance$Sigma) } )
     }
   else
     { out <- Sigma }  
@@ -624,7 +657,7 @@ msir.parameters <- function(object, numdir = object$numdir)
   x <- scale(object$x, center = mu.x, scale = FALSE)
   n <- nrow(x)
   p <- ncol(x)
-  b <- object$evectors[,1:numdir,drop=FALSE]
+  b <- object$basis[,1:numdir,drop=FALSE]
   mx <- object$mixmod
   nslices <- object$slice.info$nslices
   tau <-  object$slice.info$slice.sizes/n
@@ -660,7 +693,7 @@ msir.recoverdir <- function(object, data, normalized = TRUE, std = FALSE)
   else              x <- as.matrix(data)
   numdir <- object$numdir
   dir <- object$dir[,1:numdir,drop=FALSE]
-  # dir <- scale(x, scale = FALSE) %*% object$raw.evectors
+  # dir <- scale(x, scale = FALSE) %*% object$raw.basis
   B <- as.matrix(coef(lm(dir ~ x)))[-1,,drop=FALSE]
   if(std) 
     { sdx <- sd(x)
@@ -754,12 +787,15 @@ msir.components <- function(object)
   if(class(object) != "msir")
     stop("object is not of class 'msir'")
   nslices <- length(object$mixmod)
-  ycomp <- rep(NA, length(object$y))
   ysl <- object$slice.info$slice.indicator
+  ycomp <- rep(NA, length(ysl))
+  label <- 0
   for(i in 1:nslices)
      { m <- object$mixmod[[i]]
-       ycomp[ysl==i] <- paste(i, m$classification, sep = ":") }
-  ycomp <- as.numeric(as.factor(ycomp))
+       labels <- seq(label+1,label+m$G)
+       ycomp[ysl==i] <- labels[m$classification]
+       label <- max(labels)
+     }
   return(ycomp)
 }
 
@@ -780,18 +816,25 @@ msir.componentsSlice <- function(object)
 ##############################################################################
 ## Auxiliary functions
 
-mvdnorm <- function(x, mean, sigma, log = FALSE)
+mvdnorm <- function(x, mean, sigma, log = FALSE, tol = sqrt(.Machine$double.eps))
 {
+# Multivariate normal probability density function (pdf)
   if(is.vector(x)) 
     { x <- matrix(x, ncol = length(x)) }
   else
     { x <- as.matrix(x) }
-  x <- sweep(x, 2, mean, "-")
-  QR <- qr(sigma)
-  logdet <- sum(log(abs(diag(QR$qr))))
-  if(nrow(x) == 1)  mahaldist <- as.vector(x %*% qr.solve(QR, t(x)))
-  else              mahaldist <- rowSums((x %*% qr.solve(QR)) * x)
-  logdens <- -0.5 * (ncol(x) * log(2 * pi) + logdet + mahaldist)
+  if(missing(mean)) 
+    { mean <- rep(0, length = ncol(x)) }
+  if(missing(sigma)) 
+    { sigma <- diag(ncol(x)) }
+  #    
+  SVD <- svd(sigma)
+  pos <- (SVD$d > max(tol*SVD$d[1], 0)) # in case of not full rank covar matrix
+  inv.sigma <- SVD$v[,pos,drop=FALSE] %*% (1/SVD$d[pos] *
+                                          t(SVD$u[,pos,drop=FALSE]))
+  md <- mahalanobis(x, center = mean, cov = inv.sigma, inverted = TRUE)
+  logdet <- sum(log(SVD$d[pos]))
+  logdens <- -0.5*(ncol(x) * log(2 * pi) + logdet + md)
   if(log) return(logdens)
   else    return(exp(logdens))
 }

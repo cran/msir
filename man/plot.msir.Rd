@@ -6,9 +6,9 @@
 \description{Plots directions and other information from MSIR estimation.}
 
 \usage{
-plot.msir(x, which, 
-          type = c("pairs", "2Dplot", "spinplot", "evalues", "coefficients"), 
-          span = NULL, std = TRUE, ylab, xlab, restore.par = TRUE, ...)
+\method{plot}{msir}(x, which, 
+     type = c("pairs", "2Dplot", "spinplot", "evalues", "coefficients"), 
+     span = NULL, std = TRUE, ylab, xlab, restore.par = TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -27,14 +27,13 @@ plot.msir(x, which,
 
 %\value{}
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction, to appear in Computational Statistics & Data Analysis.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 
 \seealso{\code{\link{msir}}}
 
 \examples{
-require(MASS)
 # 2-dimensional response curve
 n = 300; p = 5
 b1 = c(1, 1, 1, rep(0, p-3))

@@ -18,14 +18,13 @@ msir.dir(object, numdir = object$numdir)
 
 \value{The function returns the estimated directions in the original \eqn{n} dimensional space for plotting.}
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction, to appear in Computational Statistics & Data Analysis.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 
 \seealso{\code{{msir}}}
 
 \examples{
-require(MASS)
 # 1-dimensional simple regression
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))

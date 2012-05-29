@@ -1,8 +1,15 @@
-Changes to version 1.0
+Version 1.1
 
-   o 
-
-   o 
+   o New mvdnorm function which should be more stable in the case of near
+     singularity of covariance matrix.
+   o Added byte-code compiling in the DESCRIPTION file.
+   o Corrected msir.components, now it preserves the order of slices.
+   o Introduced the possibility to control em algorithm.
+   o Bug correction and change in models' name in msir.regularizedSigma().
+   o The 'msir' object returns the normalized basis vectors in component
+     $basis and raw eigenvectors in component $evectors.
+   o Update reference to CSDA paper.
+   o Bugs fix.
 
 Version 1.0
 

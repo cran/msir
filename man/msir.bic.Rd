@@ -58,7 +58,6 @@ Zhu, Zhu (2007) "On kernel method for SAVE", Journal of Multivariate Analysis.
 %\note{}
 \seealso{\code{\link{msir}}}
 \examples{
-require(MASS)
 # 1-dimensional symmetric response curve
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))

@@ -6,8 +6,7 @@
 \description{Approximates marginal dimension test significance levels by sampling from the permutation distribution.}
 
 \usage{
-msir.permutation.test(object, npermute = 99, numdir = min(object$numdir, 3),
-                      verbose = TRUE)
+msir.permutation.test(object, npermute = 99, numdir = object$numdir, verbose = TRUE)
 }
 
 \arguments{
@@ -26,14 +25,13 @@ The function returns a list with components:
 Furthermore, it also assigns the above information to the corresponding \code{'msir'} object.
 }
 
-\references{
-Scrucca, L. (2011) Model-based SIR for dimension reduction, to appear in Computational Statistics & Data Analysis.
-}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
+
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
+
 \seealso{\code{\link[dr]{dr}}}
 
 \examples{
-require(MASS)
 # 1-dimensional simple regression
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))
