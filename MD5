@@ -1,10 +1,10 @@
-a26d1e86b37b076365ad16dccdbb73ef *CHANGES
-395fb154c590ef6a77f7cdc9d3bb1e7f *DESCRIPTION
+c2c70ee1ce91b7ed4b766dd4c93ed0e2 *CHANGES
+9b3f00682ad42c359f9804229b742929 *DESCRIPTION
 ac0090417f58738e56dcfea78dd34dc0 *LICENSE
 012592abf4b40a8d741b299df2ded05a *NAMESPACE
 d7ceb3b336868429917db9b7f5fb5b12 *R/loess.sd.R
-103ea918157d44f775fdf38b253dd7c4 *R/msir.R
-35d5a3566a21c6f90aa5fee8466b9d25 *inst/CITATION
+da383e60ac4b1b7636d59a39cce2ddf0 *R/msir.R
+af79b4ee23f5b1930c4d8ec44bc3bf48 *inst/CITATION
 92bb0a90ddffc4eab76aaa39660ecdbf *man/loess.sd.Rd
 dc244f9ff2f558213744dc423bbc1ab0 *man/msir-internal.Rd
 fedb93906a56870b7e75d2a311dd11ea *man/msir.Rd
@@ -15,4 +15,4 @@ f82ca7660065aff9a72869a9ae9b50e1 *man/msir.permutation.test.Rd
 a8c9a1caf2e6af2de5adcf56c907a307 *man/msir.regularizedSigma.Rd
 6e3d8c465144f96712c4f70e63f38ae5 *man/msir.slices.Rd
 d647bd91cd52d3a84c3bbf02eb081f99 *man/plot.msir.Rd
-281b52363de384a3f01ced551e4fa204 *man/summary.msir.Rd
+77e0de7958fd5bdda590cca6fee6aea9 *man/summary.msir.Rd

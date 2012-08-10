@@ -1,7 +1,7 @@
 Package: msir
 Type: Package
-Version: 1.1
-Date: 2012-05-29
+Version: 1.2
+Date: 2012-08-10
 Title: Model-based Sliced Inverse Regression
 Author: Luca Scrucca <luca@stat.unipg.it>
 Maintainer: Luca Scrucca <luca@stat.unipg.it>
@@ -12,5 +12,5 @@ License: GPL (>= 2)
 Repository: CRAN
 ByteCompile: true
 LazyLoad: yes
-Packaged: 2012-05-29 21:14:24 UTC; luca
-Date/Publication: 2012-05-30 07:22:15
+Packaged: 2012-08-10 16:17:27 UTC; luca
+Date/Publication: 2012-08-10 16:50:52

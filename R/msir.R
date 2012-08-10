@@ -10,20 +10,28 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
   call <- match.call()
   if(!is.numeric(cov)) 
     cov <- match.arg(cov)
+  if(!is.function(msir.nslices) | is.numeric(msir.nslices)) 
+    stop("nslices must be an integer value or a function")
+  if(!is.function(slice.function)) 
+    stop("slice.function must be a function")
+  #-----------------------------------------------------------------  
   xname <- deparse(substitute(x))
-  n <- length(y)
   x <- as.matrix(x)
+  n <- nrow(x)
   p <- ncol(x)
-  if(nrow(x)!=n)
-    stop("Dimension of y and x does not match!")
   if(is.null(colnames(x))) 
      colnames(x) <- paste(xname, 1:p, sep="")
   #-----------------------------------------------------------------  
-  if(is.factor(y)) 
+  if(length(y) != n)
+    stop("Dimension of y and x does not match!")
+  if(is.character(y))
+    y <- as.factor(y)
+  if(is.factor(y))
     { nslices <- nlevels(y) }
   else
     { if(!is.numeric(nslices)) nslices <- nslices(n, p)
-      nslices <- min(nslices, length(unique(y))) }
+      nslices <- min(nslices, length(unique(y))) 
+    }
   slice.info <- slice.function(y, nslices) 
   nslices <- slice.info$nslices
   ysl <- slice.info$slice.indicator
@@ -42,7 +50,7 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
       G <- max(min((n/nslices)%/%10, 15), 3)
       G <- 1:G }
   if(is.null(modelNames))
-    modelNames <- mclust:::.Mclust$emModelNames
+    modelNames <- mclust.options("emModelNames")
   mixmod <- msir.fit(x, ysl, G = G, modelNames = modelNames, ...)
   # re-order wrt ysl
   tmp <- mixmod 
@@ -165,7 +173,7 @@ msir.fit <- function(data, labels, G = NULL, modelNames = NULL,
       stop("G must be positive")
   #
   if(is.null(modelNames)) 
-    { modelNames <- rep(list(mclust:::.Mclust$emModelNames), L) }
+    { modelNames <- rep(list(mclust.options("emModelNames")), L) }
   else
   if(!is.list(modelNames)) 
     { modelNames <- rep(list(modelNames), L) }
@@ -175,8 +183,7 @@ msir.fit <- function(data, labels, G = NULL, modelNames = NULL,
     }
   #
   R <- rep(list(NULL), L)
-  for(l in 1:L) 
-  
+  for(l in 1:L)
      { I <- (labels == U[l])
        X <- data[I,]
        mc[[2]] <- X
@@ -184,8 +191,9 @@ msir.fit <- function(data, labels, G = NULL, modelNames = NULL,
        mc$modelNames <- as.character(modelNames[[l]])
        BIC <- suppressWarnings(eval(mc, parent.frame()))
        if(all(is.na(BIC))) 
-         { m <- seq(which(mclust:::.Mclust$emModelNames == mc$modelNames))
-           mc$modelNames <- mclust:::.Mclust$emModelNames[m]
+         { m <- seq(which(mclust.options("emModelNames") == mc$modelNames))
+           if(length(m) == 0) m <- 1
+           mc$modelNames <- mclust.options("emModelNames")[m]
            BIC <- suppressWarnings(eval(mc, parent.frame())) 
          }
        SUMMARY <- suppressWarnings(summary(BIC, X))
@@ -223,7 +231,7 @@ print.msir <- function(x, ...)
   cat(paste(deparse(object$call), sep="\n", collapse = "\n"), "\n", sep="")
 }
 
-summary.msir <- function(object, numdir = object$numdir, std = FALSE, ...)
+summary.msir <- function(object, numdir = object$numdir, std = FALSE, verbose = TRUE, ...)
 {
   if(class(object) != "msir")
     stop("object is not of class 'msir'." )
@@ -281,7 +289,7 @@ summary.msir <- function(object, numdir = object$numdir, std = FALSE, ...)
 
   out <- list(call = object$call, tab = tab, std = std,
               basis = basis, std.basis = std.basis, evalues = evalues,
-              StructDimTab = StructDimTab)    
+              StructDimTab = StructDimTab, verbose = verbose)
   class(out) <- "summary.msir"
   return(out)
 }
@@ -295,16 +303,18 @@ print.summary.msir <- function(x, digits = max(5, getOption("digits") - 3), ...)
   cat("Slices:\n")
   print(x$tab, na.print="", quote=FALSE)
 
-  if(x$std) 
-    { cat("\nStandardized basis vectors using predictors \nscaled to have std.dev. equal to one:\n")
-      print(x$std.basis, digits = digits) }
-  else    
-    { cat("\nEstimated basis vectors:\n")
-      print(x$basis, digits = digits) }
-  
+  if(x$verbose)
+    { if(x$std) 
+      { cat("\nStandardized basis vectors using predictors \nscaled to have std.dev. equal to one:\n")
+        print(x$std.basis, digits = digits) }
+      else    
+      { cat("\nEstimated basis vectors:\n")
+        print(x$basis, digits = digits) }
+    }
+
   cat("\n")
   print(x$evalues, digits = digits)
-  
+      
   if(!is.null(x$StructDimTab))
     { cat("\nStructural dimension:\n")
       colnames(x$StructDimTab) <- 0:(ncol(x$StructDimTab)-1)
