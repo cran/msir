@@ -2,7 +2,7 @@
 \alias{msir}
 \alias{print.msir}
 
-\title{MSIR -- Model-based Sliced Inverse Regression}
+\title{Model-based Sliced Inverse Regression (MSIR)}
 
 \description{A dimension reduction method based on Gaussian finite mixture models which provides an extension to sliced inverse regression (SIR). The basis of the subspace is estimated by modeling the inverse distribution within slice using Gaussian finite mixtures with number of components and covariance matrix parameterization selected by BIC or defined by the user.}
 
@@ -50,7 +50,7 @@ Returns an object of class \code{'msir'} with attributes:
   \item{dir}{the estimated MSIR directions from mean-centered predictors.}
 }
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics & Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 % \note{}
@@ -61,7 +61,7 @@ Returns an object of class \code{'msir'} with attributes:
 # 1-dimensional simple regression
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))
-x = mvrnorm(n, rep(0,p), diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = exp(0.5 * x\%*\%b) + 0.1*rnorm(n)
 MSIR = msir(x, y)
 summary(MSIR)
@@ -70,7 +70,7 @@ plot(MSIR, type = "2Dplot")
 # 1-dimensional symmetric response curve
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))
-x = mvrnorm(n, rep(0,p), diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = (0.5 * x\%*\%b)^2 + 0.1*rnorm(n)
 MSIR = msir(x, y)
 summary(MSIR)
@@ -82,7 +82,7 @@ n = 300; p = 5
 b1 = c(1, 1, 1, rep(0, p-3))
 b2 = c(1,-1,-1, rep(0, p-3))
 b = cbind(b1,b2)
-x = mvrnorm(n, mu = rep(0,p), Sigma = diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = x \%*\% b1 + (x \%*\% b1)^3 + 4*(x \%*\% b2)^2 + rnorm(n)
 MSIR = msir(x, y)
 summary(MSIR)

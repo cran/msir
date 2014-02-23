@@ -61,7 +61,7 @@ Zhu, Zhu (2007) "On kernel method for SAVE", Journal of Multivariate Analysis.
 # 1-dimensional symmetric response curve
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))
-x = mvrnorm(n, rep(0,p), diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = (0.5 * x\%*\%b)^2 + 0.1*rnorm(n)
 MSIR = msir(x, y)
 msir.bic(MSIR, plot = TRUE)

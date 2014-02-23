@@ -27,7 +27,7 @@
 
 %\value{}
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics & Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 
@@ -39,7 +39,7 @@ n = 300; p = 5
 b1 = c(1, 1, 1, rep(0, p-3))
 b2 = c(1,-1,-1, rep(0, p-3))
 b = cbind(b1,b2)
-x = mvrnorm(n, mu = rep(0,p), Sigma = diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = x \%*\% b1 + (x \%*\% b1)^3 + 4*(x \%*\% b2)^2 + rnorm(n)
 MSIR = msir(x, y)
 summary(MSIR)

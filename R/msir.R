@@ -256,7 +256,7 @@ summary.msir <- function(object, numdir = object$numdir, std = FALSE, verbose = 
                    "Cum. %" = cumsum(evalues/sum(object$evalues))*100)
   colnames(evalues) <- colnames(basis)
   #  { se <- msir.dirse(object)
-  #    out <- matrix(NA, nrow(basis), numdir*3)
+  #    out <- matrix(as.double(NA), nrow(basis), numdir*3)
   #    for(j in 1:numdir)
   #       { out[,((j-1)*3+1):((j-1)*3+3)] <- 
   #                        cbind(basis[,j], se[,j], basis[,j]/se[,j])
@@ -349,7 +349,7 @@ plot.msir <- function(x, which, type = c("pairs", "2Dplot", "spinplot", "evalues
                   { lines(l <- loess.sd(dir[,1], y, k = 1, span = span))
                     lines(l$x, l$upper, lty=2)
                     lines(l$x, l$lower, lty=2) } },
-   "spinplot" = { if(require(rgl))
+   "spinplot" = { if(is.element("rgl", installed.packages()[,1]))
                     { data <- data.frame(dir[,1], y, dir[,2])
                       colnames(data) <- c(colnames(dir)[1], "y", colnames(dir)[2])
                       if(!missing(ylab)) colnames(data)[2] <- ylab

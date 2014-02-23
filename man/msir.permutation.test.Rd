@@ -25,7 +25,7 @@ The function returns a list with components:
 Furthermore, it also assigns the above information to the corresponding \code{'msir'} object.
 }
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics and Data Analysis, 55(11), 3010-3026.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics & Data Analysis, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 
@@ -35,7 +35,7 @@ Furthermore, it also assigns the above information to the corresponding \code{'m
 # 1-dimensional simple regression
 n = 200; p = 5
 b = as.matrix(c(1,-1,rep(0,p-2)))
-x = mvrnorm(n, rep(0,p), diag(p))
+x = matrix(rnorm(n*p), nrow = n, ncol = p)
 y = exp(0.5 * x\%*\%b) + 0.1*rnorm(n)
 MSIR = msir(x, y)
 msir.permutation.test(MSIR)
