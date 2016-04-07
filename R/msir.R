@@ -5,7 +5,9 @@
 ## Written by Luca Scrucca                                                 ##
 #############################################################################
 
-msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, modelNames = NULL, G = NULL, cov = c("mle", "regularized"), ...)
+msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, 
+                 modelNames = NULL, G = NULL, cov = c("mle", "regularized"), 
+                 ...)
 { 
   call <- match.call()
   if(!is.numeric(cov)) 
@@ -97,7 +99,7 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
     }
   evalues <- (SVD$d+abs(SVD$d))/2
   numdir <- min(p, sum(evalues > sqrt(.Machine$double.eps)))
-  evalues <- evalues#[1:numdir]
+  # evalues <- evalues[1:numdir]
   # raw basis
   V <- SVD$v
   # normalized basis
@@ -121,14 +123,14 @@ msir <- function(x, y, nslices = msir.nslices, slice.function = msir.slices, mod
   dimnames(std.B) <- dimnames(B)
   colnames(z) <- colnames(B)
   #
-  out = list(call = call, x = x, y = y, 
-             slice.info = slice.info,
-             mixmod = mixmod, 
-             loglik = sum(sapply(mixmod, function(mod) mod$loglik)),
-             f = f, mu = mu.k, sigma = Sigma, M = M, 
-             evalues = evalues, evectors = V,
-             basis = B, std.basis = std.B, 
-             numdir = numdir, dir = z)             
+  out <- list(call = call, x = x, y = y, 
+              slice.info = slice.info,
+              mixmod = mixmod, 
+              loglik = sum(sapply(mixmod, function(mod) mod$loglik)),
+              f = f, mu = mu.k, sigma = Sigma, M = M, 
+              evalues = evalues, evectors = V,
+              basis = B, std.basis = std.B, 
+              numdir = numdir, dir = z)
   class(out) <- "msir"
   return(out)
 }

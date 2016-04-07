@@ -50,7 +50,7 @@ Returns an object of class \code{'msir'} with attributes:
   \item{dir}{the estimated MSIR directions from mean-centered predictors.}
 }
 
-\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. Computational Statistics & Data Analysis, 55(11), 3010-3026.}
+\references{Scrucca, L. (2011) Model-based SIR for dimension reduction. \emph{Computational Statistics & Data Analysis}, 55(11), 3010-3026.}
 
 \author{Luca Scrucca \email{luca@stat.unipg.it}}
 % \note{}
@@ -87,7 +87,7 @@ y = x \%*\% b1 + (x \%*\% b1)^3 + 4*(x \%*\% b2)^2 + rnorm(n)
 MSIR = msir(x, y)
 summary(MSIR)
 plot(MSIR, which = 1:2)
-\dontrun{plot(MSIR, type = "spinplot")}
+plot(MSIR, type = "spinplot")
 plot(MSIR, which = 1, type = "2Dplot", span = 0.7)
 plot(MSIR, which = 2, type = "2Dplot", span = 0.7)
 }
