@@ -8,7 +8,7 @@
 \alias{msir.components}
 \alias{msir.componentsSlice}
 \alias{msir.recoverdir}
-\alias{spinplot}
+\alias{catwrap}
 
 \title{Internal \code{'msir'} functions}
 
@@ -31,16 +31,13 @@ msir.components(object)
 msir.componentsSlice(object)
 
 msir.recoverdir(object, data, normalized = TRUE, std = FALSE)
-
-spinplot(data, \dots)
-
 }
 
 % \arguments{}
 
 \details{These functions are not intended to be called by the user.}
 
-\author{Luca Scrucca \email{luca@stat.unipg.it}}
+\author{Luca Scrucca \email{luca.scrucca@unipg.it}}
 
 \seealso{\code{\link{msir}}}
 
